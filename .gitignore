@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+.turbo
+.DS_Store
+*.log
+.azure-*
+.azure*/
+.env
+.env.local
+apps/backend/prisma/dev.db
+apps/backend/prisma/dev.db-journal
+apps/backend/.tmp
+apps/frontend/playwright-report
+apps/frontend/test-results

@@ -1,0 +1,30 @@
+{
+  "orderReference": "DR-20260402-1144",
+  "restaurantId": "deliveroo-dublin-01",
+  "placedAt": "2026-04-02T08:17:00.000Z",
+  "customerName": "Liam O'Connor",
+  "customerPhone": "+353871234567",
+  "serviceType": "pickup",
+  "notes": "Collecting in 15 minutes",
+  "lines": [
+    {
+      "name": "Smoky Bacon Burger",
+      "qty": 2,
+      "unitPrice": 10.9,
+      "modifiers": ["Extra cheese", "BBQ dip"]
+    },
+    {
+      "name": "Large Chips",
+      "qty": 1,
+      "unitPrice": 4.2
+    }
+  ],
+  "pricing": {
+    "subtotal": 26,
+    "vat": 2.6,
+    "deliveryFee": 0,
+    "serviceFee": 0.9,
+    "total": 29.5
+  },
+  "paymentStatus": "paid"
+}

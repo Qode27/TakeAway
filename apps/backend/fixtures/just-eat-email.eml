@@ -1,0 +1,21 @@
+From: notifications@justeat.example
+To: restaurant@example.com
+Subject: Just Eat Order #JE-20260402-8891
+Content-Type: text/plain; charset=utf-8
+
+Just Eat order received
+Order ID: JE-20260402-8891
+Vendor ID: justeat-dublin-01
+Time: 2026-04-02T08:44:00.000Z
+Customer: Orla Brennan
+Phone: +353851234321
+Address: 4 Capel Street, Dublin 1
+Fulfilment: Delivery
+Notes: Add extra napkins
+- Chicken Kebab Wrap x2 €9.90 (Garlic mayo, No onion)
+- Diet Coke 330ml x2 €2.60
+Subtotal: €25.00
+Tax: €2.50
+Delivery fee: €2.99
+Service fee: €0.79
+Total: €31.28

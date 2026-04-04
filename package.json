@@ -1,0 +1,27 @@
+{
+  "name": "order-hub",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @order-hub/shared && npm run build -w @order-hub/config && npm run build -w @order-hub/backend && npm run build -w @order-hub/frontend",
+    "dev": "concurrently \"npm run dev -w @order-hub/backend\" \"npm run dev -w @order-hub/frontend\"",
+    "start": "npm run start -w @order-hub/backend",
+    "lint": "npm run lint -ws --if-present",
+    "test": "npm run test -w @order-hub/shared && npm run test -w @order-hub/backend && npm run test -w @order-hub/frontend",
+    "format": "prettier --write .",
+    "db:generate": "npm run prisma:generate -w @order-hub/backend",
+    "db:migrate": "npm run prisma:migrate -w @order-hub/backend",
+    "db:seed": "npm run prisma:seed -w @order-hub/backend",
+    "postinstall": "npm run db:generate"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  }
+}

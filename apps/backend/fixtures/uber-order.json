@@ -1,0 +1,41 @@
+{
+  "order_id": "UBR-948572",
+  "store_id": "uber-dublin-01",
+  "created_at": "2026-04-02T08:10:00.000Z",
+  "customer": {
+    "name": "Sarah Byrne",
+    "phone": "+353851112233"
+  },
+  "type": "DELIVERY",
+  "address": {
+    "formatted": "22 Rathmines Road Lower, Dublin 6"
+  },
+  "note": "Extra garlic sauce, ring apartment 3",
+  "totals": {
+    "subtotal": 24.5,
+    "tax": 2.45,
+    "delivery_fee": 3.5,
+    "service_fee": 1.1,
+    "total": 31.55
+  },
+  "payment": {
+    "status": "PAID"
+  },
+  "items": [
+    {
+      "title": "Doner Kebab Meal",
+      "quantity": 1,
+      "price": 13.5,
+      "special_instructions": "No onions",
+      "modifiers": [
+        { "title": "Garlic Sauce" },
+        { "title": "Chips" }
+      ]
+    },
+    {
+      "title": "Coca-Cola 330ml",
+      "quantity": 2,
+      "price": 5.5
+    }
+  ]
+}

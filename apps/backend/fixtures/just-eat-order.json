@@ -1,0 +1,37 @@
+{
+  "id": "JE-778811",
+  "vendorId": "justeat-dublin-01",
+  "submittedAt": "2026-04-02T08:22:00.000Z",
+  "customer": {
+    "fullName": "Emma Walsh",
+    "phone": "+353861234567",
+    "address": "7 Harcourt Terrace, Dublin 2"
+  },
+  "fulfillment": {
+    "kind": "delivery",
+    "notes": "Leave at reception"
+  },
+  "basket": [
+    {
+      "title": "Chicken Fillet Wrap",
+      "amount": 9.8,
+      "quantity": 2,
+      "options": [{ "label": "Spicy mayo" }, { "label": "No tomato" }]
+    },
+    {
+      "title": "Fanta Orange 330ml",
+      "amount": 2.8,
+      "quantity": 1
+    }
+  ],
+  "pricing": {
+    "subtotal": 22.4,
+    "tax": 2.24,
+    "fees": {
+      "delivery": 2.99,
+      "service": 0.79
+    },
+    "total": 28.42
+  },
+  "paymentStatus": "paid"
+}

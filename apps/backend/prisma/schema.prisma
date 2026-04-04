@@ -1,0 +1,255 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  manager
+  kitchen_staff
+}
+
+enum Platform {
+  uber_eats
+  deliveroo
+  just_eat
+  email_fallback
+}
+
+enum FulfillmentType {
+  delivery
+  pickup
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum OrderStatus {
+  new
+  accepted
+  preparing
+  ready
+  completed
+  cancelled
+}
+
+enum KitchenStatus {
+  new
+  preparing
+  ready
+  completed
+}
+
+enum IngestionSource {
+  webhook
+  email
+  manual
+  seed
+}
+
+enum SyncState {
+  pending
+  synced
+  failed
+  mocked
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  fullName      String
+  role          Role
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  tokenHash  String
+  expiresAt  DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+}
+
+model Store {
+  id                  String               @id @default(cuid())
+  name                String
+  timezone            String               @default("Europe/Dublin")
+  currency            String               @default("EUR")
+  address             String
+  phone               String?
+  alertSoundEnabled   Boolean              @default(true)
+  autoRefreshSeconds  Int                  @default(15)
+  platformConnections PlatformConnection[]
+  orders              Order[]
+  emailInboxConfigs   EmailInboxConfig[]
+  printerConfigs      PrinterConfig[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model PlatformConnection {
+  id                String   @id @default(cuid())
+  platform          Platform
+  storeId           String
+  store             Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  externalStoreId   String
+  apiKey            String?
+  apiSecret         String?
+  webhookSecret     String?
+  isEnabled         Boolean  @default(false)
+  usesEmailFallback Boolean  @default(false)
+  lastSyncedAt      DateTime?
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([platform, externalStoreId], name: "platform_externalStoreId")
+}
+
+model Order {
+  id                  String            @id @default(cuid())
+  internalOrderNumber String            @unique
+  externalOrderId     String
+  platform            Platform
+  platformStoreId     String
+  storeId             String
+  store               Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customerName        String?
+  customerPhone       String?
+  fulfillmentType     FulfillmentType
+  deliveryAddress     String?
+  orderNotes          String?
+  subtotal            Decimal           @db.Decimal(10, 2)
+  tax                 Decimal           @db.Decimal(10, 2)
+  deliveryFee         Decimal           @db.Decimal(10, 2)
+  serviceFee          Decimal           @db.Decimal(10, 2)
+  total               Decimal           @db.Decimal(10, 2)
+  paymentStatus       PaymentStatus
+  orderStatus         OrderStatus
+  kitchenStatus       KitchenStatus
+  scheduledFor        DateTime?
+  ingestionSource     IngestionSource
+  syncState           SyncState
+  errorState          String?
+  rawPayload          Json
+  items               OrderItem[]
+  events              OrderEvent[]
+  rawIngestionEventId String?           @unique
+  rawIngestionEvent   RawIngestionEvent? @relation(fields: [rawIngestionEventId], references: [id], onDelete: SetNull)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@unique([platform, externalOrderId, storeId], name: "platform_externalOrderId_storeId")
+  @@index([orderStatus])
+  @@index([createdAt])
+  @@index([platform])
+  @@index([externalOrderId])
+  @@index([storeId])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name       String
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  totalPrice Decimal  @db.Decimal(10, 2)
+  notes      String?
+  modifiers  Json
+}
+
+model OrderEvent {
+  id         String      @id @default(cuid())
+  orderId    String
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type       String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus?
+  payload    Json?
+  createdAt  DateTime    @default(now())
+}
+
+model RawIngestionEvent {
+  id                String         @id @default(cuid())
+  platform          Platform
+  source            IngestionSource
+  externalOrderId   String?
+  signature         String?
+  idempotencyKey    String         @unique
+  status            String
+  payload           Json
+  emailSubject      String?
+  emailFrom         String?
+  normalizedPayload Json?
+  errorMessage      String?
+  order             Order?
+  webhookEvents     WebhookEvent[]
+  createdAt         DateTime       @default(now())
+  processedAt       DateTime?
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
+
+model EmailInboxConfig {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  host            String
+  port            Int
+  username        String
+  password        String
+  useTls          Boolean  @default(true)
+  pollingInterval Int      @default(30000)
+  isEnabled       Boolean  @default(false)
+  platformHints   Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id                  String            @id @default(cuid())
+  rawIngestionEventId String
+  rawIngestionEvent   RawIngestionEvent @relation(fields: [rawIngestionEventId], references: [id], onDelete: Cascade)
+  platform            Platform
+  deliveryAttempt     Int               @default(1)
+  status              String
+  responseCode        Int?
+  responseBody        String?
+  createdAt           DateTime          @default(now())
+}
+
+model PrinterConfig {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name      String
+  ipAddress String?
+  isEnabled Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

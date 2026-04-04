@@ -1,0 +1,19 @@
+From: orders@deliveroo.example
+To: restaurant@example.com
+Subject: Deliveroo Order #DR-20260402-5511
+Content-Type: text/plain; charset=utf-8
+
+Deliveroo order notification
+Order reference: DR-20260402-5511
+Restaurant ID: deliveroo-dublin-01
+Customer: Patrick Nolan
+Service: Delivery
+Placed at: 2026-04-02T08:32:00.000Z
+Address: 15 South Circular Road, Dublin 8
+- Margherita Pizza x1 €11.50 (Extra mozzarella)
+- Garlic Chips x1 €4.20
+Subtotal: €15.70
+VAT: €1.57
+Delivery fee: €2.99
+Service fee: €0.89
+Total: €21.15

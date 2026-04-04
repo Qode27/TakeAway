@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.azure-deploy
+.azure-deploy.zip
+.azure-source.zip
+.env
+**/.env
+coverage
+**/coverage
+.turbo
+npm-debug.log*
