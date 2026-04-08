@@ -6,9 +6,11 @@ COPY apps/frontend/package.json apps/frontend/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/config/package.json packages/config/package.json
 
-RUN npm install
+RUN npm install --ignore-scripts
 
+COPY apps/frontend/.env* apps/frontend/.env
 COPY . .
+
 RUN npm run build -w @order-hub/shared
 RUN npm run build -w @order-hub/config
 RUN npm run build -w @order-hub/frontend

@@ -13,3 +13,4 @@ apps/backend/prisma/dev.db-journal
 apps/backend/.tmp
 apps/frontend/playwright-report
 apps/frontend/test-results
+.vscode
