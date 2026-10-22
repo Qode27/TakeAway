@@ -33,15 +33,16 @@ export function createApp() {
   app.set("trust proxy", env.TRUST_PROXY);
   app.use(helmet());
   app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-          return;
-        }
-        callback(new Error("Origin not allowed by CORS"));
-      },
-      credentials: true
+    cors((req, callback) => {
+      const origin = req.headers.origin;
+      const host = req.headers["x-forwarded-host"] ?? req.headers.host;
+      // The frontend is served by this same server, so same-origin requests are always allowed
+      const isSameOrigin = Boolean(origin && host && new URL(origin).host === host);
+      if (!origin || isSameOrigin || allowedOrigins.includes(origin)) {
+        callback(null, { origin: true, credentials: true });
+        return;
+      }
+      callback(new Error("Origin not allowed by CORS"));
     })
   );
   app.use(express.json({ limit: "1mb" }));

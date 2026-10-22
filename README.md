@@ -2,6 +2,10 @@
 
 Order Hub is a modular monolith for takeaway teams that need one operational screen for Uber Eats, Deliveroo, and Just Eat orders. It is designed for a real kitchen environment first: dark high-contrast UI, fast status movement, realtime updates, duplicate-safe ingestion, and clear adapter boundaries for platform onboarding.
 
+## CI/CD on Azure (classroom demo)
+
+Step-by-step guide: **[docs/azure-cicd-guide.md](docs/azure-cicd-guide.md)**. It covers the Azure Pipeline ([azure-pipelines.yml](azure-pipelines.yml)), building the [Dockerfile](Dockerfile) image, pushing to Azure Container Registry, and deploying to Azure App Service.
+
 ## Monorepo layout
 
 ```text
@@ -14,6 +18,8 @@ Order Hub is a modular monolith for takeaway teams that need one operational scr
 |   `-- screenshots.md
 |-- infra
 |   `-- docker-compose.yml
+|-- Dockerfile             (one image: backend + built frontend)
+|-- azure-pipelines.yml    (CI/CD pipeline)
 `-- packages
     |-- config
     `-- shared
@@ -31,7 +37,7 @@ Order Hub is a modular monolith for takeaway teams that need one operational scr
 
 ### Adapter-ready now
 
-- Uber Eats outbound status sync is isolated behind [apps/backend/src/services/platform-sync.service.ts](/d:/TakeAway/apps/backend/src/services/platform-sync.service.ts) and currently uses a mock transport until production credentials are available
+- Uber Eats outbound status sync is isolated behind [apps/backend/src/services/platform-sync.service.ts](apps/backend/src/services/platform-sync.service.ts) and currently uses a mock transport until production credentials are available
 - Deliveroo direct API integration
 - Just Eat direct API integration
 
@@ -116,18 +122,13 @@ npm run dev
 
 ## Full local stack with app containers
 
-After `.env` files exist, start the full stack:
+Build the app image and start it with PostgreSQL:
 
 ```bash
-docker compose -f infra/docker-compose.yml --profile app up --build
+docker compose -f infra/docker-compose.yml up --build
 ```
 
-This starts:
-
-- PostgreSQL on `5432`
-- Redis on `6379`
-- Backend on `4000`
-- Frontend on `5173`
+Open `http://localhost:4000`. The container runs migrations and loads the seed data on start.
 
 ## Exact production deploy steps
 
@@ -152,33 +153,20 @@ npm run db:migrate
 7. Build and start the stack:
 
 ```bash
-docker compose -f infra/docker-compose.yml --profile app up -d --build
+docker compose -f infra/docker-compose.yml up -d --build
 ```
 
 8. Put a reverse proxy in front of the frontend and backend.
-9. Route HTTPS traffic to:
-   - frontend container port `80`
-   - backend container port `4000`
+9. Route HTTPS traffic to the app container on port `4000` (it serves both the API and the frontend)
 10. Verify:
    - `/api/health`
    - `/api/ready`
    - login flow
    - webhook ingress
 
-### Option B: Azure App Service
+### Option B: Azure App Service (CI/CD)
 
-1. Provision:
-   - Azure Database for PostgreSQL
-   - Azure Cache for Redis
-   - App Service for backend
-   - App Service or Static Web App for frontend
-2. Set backend env vars from [apps/backend/.env.example](/d:/TakeAway/apps/backend/.env.example).
-3. Set frontend env vars from [apps/frontend/.env.example](/d:/TakeAway/apps/frontend/.env.example).
-4. Deploy backend container from [apps/backend/Dockerfile](/d:/TakeAway/apps/backend/Dockerfile).
-5. Deploy frontend container from [apps/frontend/Dockerfile](/d:/TakeAway/apps/frontend/Dockerfile).
-6. Run `npm run db:migrate` against the production PostgreSQL database before traffic cutover.
-7. Configure allowed frontend origins in `APP_ORIGIN`.
-8. Enable HTTPS and health probes to `/api/health`.
+Follow [docs/azure-cicd-guide.md](docs/azure-cicd-guide.md).
 
 ## Security and reliability basics already included
 
@@ -220,12 +208,12 @@ Could not be live-verified in this workspace because the host machine does not h
 - live PostgreSQL migration execution
 - live seed execution against PostgreSQL
 
-The repo now includes a committed initial Prisma migration in [apps/backend/prisma/migrations/20260402094000_init/migration.sql](/d:/TakeAway/apps/backend/prisma/migrations/20260402094000_init/migration.sql) so deployment does not depend on generating migrations locally.
+The repo now includes a committed initial Prisma migration in [apps/backend/prisma/migrations/20260402094000_init/migration.sql](apps/backend/prisma/migrations/20260402094000_init/migration.sql) so deployment does not depend on generating migrations locally.
 
 ## Fixtures
 
-- Uber Eats webhook sample: [apps/backend/fixtures/uber-order.json](/d:/TakeAway/apps/backend/fixtures/uber-order.json)
-- Deliveroo sample payload: [apps/backend/fixtures/deliveroo-order.json](/d:/TakeAway/apps/backend/fixtures/deliveroo-order.json)
-- Just Eat sample payload: [apps/backend/fixtures/just-eat-order.json](/d:/TakeAway/apps/backend/fixtures/just-eat-order.json)
-- Deliveroo email fallback: [apps/backend/fixtures/deliveroo-email.eml](/d:/TakeAway/apps/backend/fixtures/deliveroo-email.eml)
-- Just Eat email fallback: [apps/backend/fixtures/just-eat-email.eml](/d:/TakeAway/apps/backend/fixtures/just-eat-email.eml)
+- Uber Eats webhook sample: [apps/backend/fixtures/uber-order.json](apps/backend/fixtures/uber-order.json)
+- Deliveroo sample payload: [apps/backend/fixtures/deliveroo-order.json](apps/backend/fixtures/deliveroo-order.json)
+- Just Eat sample payload: [apps/backend/fixtures/just-eat-order.json](apps/backend/fixtures/just-eat-order.json)
+- Deliveroo email fallback: [apps/backend/fixtures/deliveroo-email.eml](apps/backend/fixtures/deliveroo-email.eml)
+- Just Eat email fallback: [apps/backend/fixtures/just-eat-email.eml](apps/backend/fixtures/just-eat-email.eml)

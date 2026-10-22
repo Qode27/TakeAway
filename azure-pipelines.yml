@@ -1,0 +1,142 @@
+# =====================================================================
+#  Order Hub - CI/CD pipeline
+#
+#  CI  (Continuous Integration): test the code, build a Docker image,
+#       push the image to Azure Container Registry (ACR)
+#  CD  (Continuous Delivery):    deploy that exact image to Azure App Service
+#
+#  Every push to "main" runs the whole pipeline automatically.
+# =====================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+# ---------------------------------------------------------------------
+#  CHANGE THESE to match what you created in the Azure portal
+# ---------------------------------------------------------------------
+variables:
+  azureServiceConnection: 'azure-connection'   # Azure DevOps > Project settings > Service connections
+  resourceGroup: 'takeaway-rg'                 # Resource group that holds everything
+  acrName: 'takeawayacr'                       # ACR name (without .azurecr.io)
+  webAppName: 'takeaway-app'                   # App Service (Web App) name
+  imageName: 'takeaway'                        # Name of the image inside ACR
+  imageTag: '$(Build.BuildId)'                 # Every build gets a unique tag: 1, 2, 3 ...
+
+stages:
+  # ===================================================================
+  #  STAGE 1 - CI
+  # ===================================================================
+  - stage: CI
+    displayName: 'CI - Test, Build & Push image'
+    jobs:
+      - job: Test
+        displayName: 'Install, lint and test'
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js 22'
+            inputs:
+              versionSpec: '22.x'
+
+          - script: npm ci
+            displayName: 'Install dependencies'
+
+          - script: npm run lint
+            displayName: 'Lint (type check)'
+
+          - script: npm test
+            displayName: 'Run unit tests'
+
+      - job: BuildImage
+        displayName: 'Build & push Docker image'
+        dependsOn: Test                      # only build the image if tests passed
+        steps:
+          - task: AzureCLI@2
+            displayName: 'docker build + docker push to ACR'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -e
+                IMAGE=$(acrName).azurecr.io/$(imageName)
+
+                echo "Logging in to ACR..."
+                az acr login --name $(acrName)
+
+                echo "Building image $IMAGE:$(imageTag)"
+                docker build -t $IMAGE:$(imageTag) -t $IMAGE:latest .
+
+                echo "Pushing image to ACR..."
+                docker push $IMAGE:$(imageTag)
+                docker push $IMAGE:latest
+
+  # ===================================================================
+  #  STAGE 2 - CD
+  # ===================================================================
+  - stage: CD
+    displayName: 'CD - Deploy to App Service'
+    dependsOn: CI
+    condition: succeeded()
+    jobs:
+      - deployment: Deploy
+        displayName: 'Deploy image to Web App'
+        environment: 'production'            # add an approval on this environment to demo manual gates
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: 'Point Web App at the new image'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -e
+                      ACR_URL=https://$(acrName).azurecr.io
+                      ACR_USER=$(az acr credential show -n $(acrName) --query username -o tsv)
+                      ACR_PASS=$(az acr credential show -n $(acrName) --query "passwords[0].value" -o tsv)
+
+                      echo "Setting app settings (non-secret config)..."
+                      az webapp config appsettings set -g $(resourceGroup) -n $(webAppName) --output none --settings \
+                        WEBSITES_PORT=4000 \
+                        WEBSITES_CONTAINER_START_TIME_LIMIT=600 \
+                        NODE_ENV=production \
+                        ENABLE_BACKGROUND_WORKERS=false \
+                        REDIS_URL=redis://not-used
+
+                      echo "Deploying image $(acrName).azurecr.io/$(imageName):$(imageTag)"
+                      az webapp config container set -g $(resourceGroup) -n $(webAppName) --output none \
+                        --container-image-name $(acrName).azurecr.io/$(imageName):$(imageTag) \
+                        --container-registry-url $ACR_URL \
+                        --container-registry-user $ACR_USER \
+                        --container-registry-password $ACR_PASS
+
+                      az webapp restart -g $(resourceGroup) -n $(webAppName)
+
+                - task: AzureCLI@2
+                  displayName: 'Smoke test - is the app alive?'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnection)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      APP_HOST=$(az webapp show -g $(resourceGroup) -n $(webAppName) --query defaultHostName -o tsv)
+                      URL=https://$APP_HOST/api/health
+                      echo "Checking $URL (the first start can take a few minutes)..."
+                      for i in $(seq 1 30); do
+                        if curl -fsS $URL; then
+                          echo ""
+                          echo "App is live at https://$APP_HOST"
+                          exit 0
+                        fi
+                        echo "Not ready yet ($i/30), waiting 20s..."
+                        sleep 20
+                      done
+                      echo "App did not become healthy. Check Web App > Log stream in the portal."
+                      exit 1

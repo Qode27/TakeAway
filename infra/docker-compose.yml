@@ -1,3 +1,7 @@
+# Run the whole app locally with Docker:
+#   docker compose -f infra/docker-compose.yml up --build
+# Then open http://localhost:4000  (login: admin@orderhub.ie / Password123!)
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -16,56 +20,30 @@ services:
       timeout: 5s
       retries: 5
 
+  # Only needed for "npm run dev" with background workers on; the app container below doesn't use it
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  backend:
+  app:
     build:
       context: ..
-      dockerfile: apps/backend/Dockerfile
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file:
-      - ../apps/backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_hub
-      REDIS_URL: redis://redis:6379
-      APP_ORIGIN: http://localhost:5173
+      REDIS_URL: redis://not-used
+      ENABLE_BACKGROUND_WORKERS: "false"
+      JWT_ACCESS_SECRET: local-access-secret-at-least-32-characters
+      JWT_REFRESH_SECRET: local-refresh-secret-at-least-32-characters
+      APP_ORIGIN: http://localhost:4000
     ports:
       - "4000:4000"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-    profiles: ["app"]
-
-  frontend:
-    build:
-      context: ..
-      dockerfile: apps/frontend/Dockerfile
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
-      - "5173:80"
-    profiles: ["app"]
 
 volumes:
   postgres_data:
-  redis_data:
