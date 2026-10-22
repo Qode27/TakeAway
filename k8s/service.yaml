@@ -1,0 +1,12 @@
+# Service = one stable public IP that load-balances across the pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: takeaway
+spec:
+  type: LoadBalancer        # Azure creates a public IP for this
+  selector:
+    app: takeaway
+  ports:
+    - port: 80              # users connect to http://<EXTERNAL-IP>
+      targetPort: 4000      # the container listens on 4000

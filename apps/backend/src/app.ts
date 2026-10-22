@@ -31,7 +31,8 @@ export function createApp() {
     frontendDistCandidates[0];
   app.disable("x-powered-by");
   app.set("trust proxy", env.TRUST_PROXY);
-  app.use(helmet());
+  // Allow the app to be served over plain http (e.g. http://<kubernetes-ip>) for the demo
+  app.use(helmet({ contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } } }));
   app.use(
     cors((req, callback) => {
       const origin = req.headers.origin;

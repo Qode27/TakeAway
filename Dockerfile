@@ -35,6 +35,9 @@ COPY --from=build /app /app
 
 EXPOSE 4000
 
-# On start: create/upgrade database tables, load demo data, start the server
+# Background workers need Redis - off by default
+ENV ENABLE_BACKGROUND_WORKERS=false
+
+# On start: if a database is configured, create tables + load demo data. Then start the server.
 WORKDIR /app/apps/backend
-CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && node dist/server.js"]
+CMD ["sh", "-c", "if [ -n \"$DATABASE_URL\" ]; then npx prisma migrate deploy && npx tsx prisma/seed.ts; fi; node dist/server.js"]

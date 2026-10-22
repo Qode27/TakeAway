@@ -3,7 +3,7 @@
 #
 #  CI  (Continuous Integration): test the code, build a Docker image,
 #       push the image to Azure Container Registry (ACR)
-#  CD  (Continuous Delivery):    deploy that exact image to Azure App Service
+#  CD  (Continuous Delivery):    deploy that exact image to Kubernetes (AKS)
 #
 #  Every push to "main" runs the whole pipeline automatically.
 # =====================================================================
@@ -23,7 +23,7 @@ variables:
   azureServiceConnection: 'azure-connection'   # Azure DevOps > Project settings > Service connections
   resourceGroup: 'takeaway-rg'                 # Resource group that holds everything
   acrName: 'takeawayacr'                       # ACR name (without .azurecr.io)
-  webAppName: 'takeaway-app'                   # App Service (Web App) name
+  aksName: 'takeaway-aks'                      # AKS cluster name
   imageName: 'takeaway'                        # Name of the image inside ACR
   imageTag: '$(Build.BuildId)'                 # Every build gets a unique tag: 1, 2, 3 ...
 
@@ -79,45 +79,40 @@ stages:
   #  STAGE 2 - CD
   # ===================================================================
   - stage: CD
-    displayName: 'CD - Deploy to App Service'
+    displayName: 'CD - Deploy to Kubernetes'
     dependsOn: CI
     condition: succeeded()
     jobs:
       - deployment: Deploy
-        displayName: 'Deploy image to Web App'
+        displayName: 'Deploy image to AKS'
         environment: 'production'            # add an approval on this environment to demo manual gates
         strategy:
           runOnce:
             deploy:
               steps:
+                - checkout: self               # we need the k8s/*.yaml files
+
                 - task: AzureCLI@2
-                  displayName: 'Point Web App at the new image'
+                  displayName: 'kubectl apply'
                   inputs:
                     azureSubscription: '$(azureServiceConnection)'
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
                       set -e
-                      ACR_URL=https://$(acrName).azurecr.io
-                      ACR_USER=$(az acr credential show -n $(acrName) --query username -o tsv)
-                      ACR_PASS=$(az acr credential show -n $(acrName) --query "passwords[0].value" -o tsv)
+                      echo "Connecting kubectl to the AKS cluster..."
+                      az aks get-credentials -g $(resourceGroup) -n $(aksName) --overwrite-existing
 
-                      echo "Setting app settings (non-secret config)..."
-                      az webapp config appsettings set -g $(resourceGroup) -n $(webAppName) --output none --settings \
-                        WEBSITES_PORT=4000 \
-                        WEBSITES_CONTAINER_START_TIME_LIMIT=600 \
-                        NODE_ENV=production \
-                        ENABLE_BACKGROUND_WORKERS=false \
-                        REDIS_URL=redis://not-used
+                      IMAGE=$(acrName).azurecr.io/$(imageName):$(imageTag)
+                      echo "Deploying image $IMAGE"
+                      sed -i "s|IMAGE_PLACEHOLDER|$IMAGE|" k8s/deployment.yaml
 
-                      echo "Deploying image $(acrName).azurecr.io/$(imageName):$(imageTag)"
-                      az webapp config container set -g $(resourceGroup) -n $(webAppName) --output none \
-                        --container-image-name $(acrName).azurecr.io/$(imageName):$(imageTag) \
-                        --container-registry-url $ACR_URL \
-                        --container-registry-user $ACR_USER \
-                        --container-registry-password $ACR_PASS
+                      kubectl apply -f k8s/
 
-                      az webapp restart -g $(resourceGroup) -n $(webAppName)
+                      echo "Waiting for the new pods to be ready..."
+                      kubectl rollout status deployment/takeaway --timeout=5m
+
+                      kubectl get pods -l app=takeaway -o wide
 
                 - task: AzureCLI@2
                   displayName: 'Smoke test - is the app alive?'
@@ -126,17 +121,17 @@ stages:
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
-                      APP_HOST=$(az webapp show -g $(resourceGroup) -n $(webAppName) --query defaultHostName -o tsv)
-                      URL=https://$APP_HOST/api/health
-                      echo "Checking $URL (the first start can take a few minutes)..."
+                      az aks get-credentials -g $(resourceGroup) -n $(aksName) --overwrite-existing
+                      echo "Waiting for the public IP (first deploy takes 1-2 minutes)..."
                       for i in $(seq 1 30); do
-                        if curl -fsS $URL; then
+                        IP=$(kubectl get service takeaway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                        if [ -n "$IP" ] && curl -fsS http://$IP/api/health; then
                           echo ""
-                          echo "App is live at https://$APP_HOST"
+                          echo "App is live at http://$IP"
                           exit 0
                         fi
-                        echo "Not ready yet ($i/30), waiting 20s..."
-                        sleep 20
+                        echo "Not ready yet ($i/30), waiting 10s..."
+                        sleep 10
                       done
-                      echo "App did not become healthy. Check Web App > Log stream in the portal."
+                      echo "App did not become healthy. Try: kubectl get pods / kubectl logs deployment/takeaway"
                       exit 1

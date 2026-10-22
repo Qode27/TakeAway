@@ -1,0 +1,39 @@
+# Deployment = "keep N pods running this image"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: takeaway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: takeaway
+  template:
+    metadata:
+      labels:
+        app: takeaway
+    spec:
+      containers:
+        - name: takeaway
+          image: IMAGE_PLACEHOLDER        # the pipeline replaces this with <acr>.azurecr.io/takeaway:<build id>
+          ports:
+            - containerPort: 4000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: JWT_ACCESS_SECRET
+              value: demo-access-secret-at-least-32-characters
+            - name: JWT_REFRESH_SECRET
+              value: demo-refresh-secret-at-least-32-characters
+          readinessProbe:                 # Kubernetes only sends traffic once this returns 200
+            httpGet:
+              path: /api/health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

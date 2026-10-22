@@ -4,7 +4,7 @@ Order Hub is a modular monolith for takeaway teams that need one operational scr
 
 ## CI/CD on Azure (classroom demo)
 
-Step-by-step guide: **[docs/azure-cicd-guide.md](docs/azure-cicd-guide.md)**. It covers the Azure Pipeline ([azure-pipelines.yml](azure-pipelines.yml)), building the [Dockerfile](Dockerfile) image, pushing to Azure Container Registry, and deploying to Azure App Service.
+Step-by-step guide: **[docs/azure-cicd-guide.md](docs/azure-cicd-guide.md)**. It covers the Azure Pipeline ([azure-pipelines.yml](azure-pipelines.yml)), building the [Dockerfile](Dockerfile) image, pushing to Azure Container Registry, and deploying to Kubernetes (AKS).
 
 ## Monorepo layout
 
@@ -20,6 +20,7 @@ Step-by-step guide: **[docs/azure-cicd-guide.md](docs/azure-cicd-guide.md)**. It
 |   `-- docker-compose.yml
 |-- Dockerfile             (one image: backend + built frontend)
 |-- azure-pipelines.yml    (CI/CD pipeline)
+|-- k8s                    (Kubernetes manifests)
 `-- packages
     |-- config
     `-- shared
@@ -164,7 +165,7 @@ docker compose -f infra/docker-compose.yml up -d --build
    - login flow
    - webhook ingress
 
-### Option B: Azure App Service (CI/CD)
+### Option B: Azure Kubernetes Service (CI/CD)
 
 Follow [docs/azure-cicd-guide.md](docs/azure-cicd-guide.md).
 
