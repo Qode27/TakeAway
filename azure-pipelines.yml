@@ -23,7 +23,7 @@ variables:
   azureServiceConnection: 'azure-connection'   # Azure DevOps > Project settings > Service connections
   resourceGroup: 'takeaway-rg'                 # Resource group that holds everything
   acrName: 'takeawayacr'                       # ACR name (without .azurecr.io)
-  aksName: 'takeaway-aks'                      # AKS cluster name
+  aksName: 'takeawayaks'                      # AKS cluster name
   imageName: 'takeaway'                        # Name of the image inside ACR
   imageTag: '$(Build.BuildId)'                 # Every build gets a unique tag: 1, 2, 3 ...
 
