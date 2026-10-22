@@ -63,7 +63,9 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 set -e
-                IMAGE=$(acrName).azurecr.io/$(imageName)
+                # Ask Azure for the registry address (e.g. takeawayacr.azurecr.io)
+                LOGIN_SERVER=$(az acr show -n $(acrName) --query loginServer -o tsv)
+                IMAGE=$LOGIN_SERVER/$(imageName)
 
                 echo "Logging in to ACR..."
                 az acr login --name $(acrName)
@@ -103,7 +105,8 @@ stages:
                       echo "Connecting kubectl to the AKS cluster..."
                       az aks get-credentials -g $(resourceGroup) -n $(aksName) --overwrite-existing
 
-                      IMAGE=$(acrName).azurecr.io/$(imageName):$(imageTag)
+                      LOGIN_SERVER=$(az acr show -n $(acrName) --query loginServer -o tsv)
+                      IMAGE=$LOGIN_SERVER/$(imageName):$(imageTag)
                       echo "Deploying image $IMAGE"
                       sed -i "s|IMAGE_PLACEHOLDER|$IMAGE|" k8s/deployment.yaml
 

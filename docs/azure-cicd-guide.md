@@ -34,6 +34,8 @@ Use the **same resource group and region** for everything. The ACR name must be 
 
 ### 2. Container Registry (ACR)
 - **Name:** `takeawayacr` · **Pricing plan:** Basic
+- **Role assignment permissions mode:** *RBAC Registry Permissions* (not the "+ ABAC Repository Permissions" option, which blocks the normal push/pull roles)
+- **Domain name label scope:** any option works (the pipeline looks up the registry's real address)
 
 ### 3. Kubernetes cluster (AKS)
 **Create a resource → Kubernetes Service → Create → Kubernetes cluster**
