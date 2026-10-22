@@ -4,6 +4,7 @@ Order Hub is a modular monolith for takeaway teams that need one operational scr
 
 ## CI/CD on Azure (classroom demo)
 
+
 Step-by-step guide: **[docs/azure-cicd-guide.md](docs/azure-cicd-guide.md)**. It covers the Azure Pipeline ([azure-pipelines.yml](azure-pipelines.yml)), building the [Dockerfile](Dockerfile) image, pushing to Azure Container Registry, and deploying to Kubernetes (AKS).
 
 ## Monorepo layout
